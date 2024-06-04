@@ -1,0 +1,7 @@
+---
+- name: Configuração do servidor
+  hosts: seu_servidor
+  become: true
+  tasks:
+  roles:
+    - role: config-so

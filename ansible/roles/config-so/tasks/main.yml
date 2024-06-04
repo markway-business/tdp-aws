@@ -1,0 +1,75 @@
+---
+- name: Instalar pacotes necessários
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - epel-release
+    - telnet
+    - net-tools
+    - wget
+    - vim
+    - mlocate
+
+- name: Parar e desabilitar firewall
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+- name: Parar e desabilitar SELinux
+  selinux:
+    state: disable
+- name: Instalar e configurar NTP
+  yum:
+    name: ntp
+    state: present
+  notify: restart ntpd
+  tags: ntp
+
+- name: Configurar vm.overcommit_memory para 1
+  sysctl:
+    name: vm.overcommit_memory
+    value: 1
+    state: present
+    reload: yes
+
+- name: Desabilitar Transparent Huge Pages (THP)
+  command: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+  args:
+    creates: /sys/kernel/mm/transparent_hugepage/enable
+
+- name: Configurar vm.swappiness para 1
+  sysctl:
+    name: vm.swappiness
+    value: 1
+    state: present
+    reload: yes
+
+- name: Garantir que vm.overcommit_memory está presente em /etc/sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^vm.overcommit_memory'
+    line: 'vm.overcommit_memory = 1'
+
+- name: Garantir que vm.swappiness está presente em /etc/sysctl.conf
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^vm.swappiness'
+    line: 'vm.swappiness = 1'
+
+- name: Desabilitar Transparent Huge Pages (THP) no boot
+  copy:
+    content: |
+      if test -f /sys/kernel/mm/transparent_hugepage/enabled; then
+        echo never > /sys/kernel/mm/transparent_hugepage/enabled
+      fi
+      if test -f /sys/kernel/mm/transparent_hugepage/defrag; then
+        echo never > /sys/kernel/mm/transparent_hugepage/defrag
+      fi
+    dest: /etc/init.d/disable-thp
+    mode: '0755'
+
+- name: Habilitar serviço de desabilitar THP
+  command: update-rc.d disable-thp defaults
+  args:
+    creates: /etc/rc3.d/S99disable-thp

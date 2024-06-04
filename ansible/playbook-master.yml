@@ -1,0 +1,64 @@
+---
+- name: Configuração do Master
+  hosts: master
+  become: true
+  tasks:
+    - name: Instalar pacotes httpd e createrepo
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - httpd
+        - createrepo
+
+    - name: Baixar pacotes para /var/www/html/
+      get_url:
+        url: "{{ item.url }}"
+        dest: "/var/www/html/{{ item.dest }}"
+        username: usuariotdp
+        password: teste123
+      with_items:
+        - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/components/2.1.0/tdp-components-2-1-0-rhel-7-x86-64.tar.gz", dest: "tdp-components-2-1-0-rhel-7-x86-64.tar.gz" }
+        - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/utils/2.1.0/tdp-utils-2-1-0-rhel-7-x86-64.tar.gz", dest: "tdp-utils-2-1-0-rhel-7-x86-64.tar.gz" }
+        - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/installer/2.1.0/rhel-7-x86_64/ambari-tdp-installer-rhel-7.sh", dest: "ambari-tdp-installer-rhel-7.sh" }
+
+    - name: Extrair arquivos
+      unarchive:
+        src: "/var/www/html/{{ item }}"
+        dest: "/var/www/html/"
+      with_items:
+        - tdp-components-2-1-0-rhel-7-x86-64.tar.gz
+        - tdp-utils-2-1-0-rhel-7-x86-64.tar.gz
+
+    - name: Criar repositórios
+      command: createrepo "{{ item }}"
+      with_items:
+        - "/var/www/html/repo/yum/tdp/utils/2.1.0/rhel-7-x8_64"
+        - "/var/www/html/repo/yum/tdp/components/2.1.0/rhel-7-x8_64"
+      notify: restart httpd
+      tags: createrepo
+
+    - name: Configurar alias httpd
+      blockinfile:
+        path: /etc/httpd/conf/httpd.conf
+        marker: "# {mark} ANSIBLE MANAGED BLOCK {{ item }}"
+        block: |
+          Alias /repo /var/www/html/repo
+            <Directory /var/www/html/repo>
+              Options Indexes FollowSymLinks
+              AllowOverride None
+              Require all granted
+            </Directory>
+      notify: restart httpd
+  roles:
+    - role: config-so
+
+  handlers:
+    - name: restart ntpd
+      service:
+        name: ntpd
+        state: restarted
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted
