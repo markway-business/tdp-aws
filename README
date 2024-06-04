@@ -23,3 +23,7 @@ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
 terraform init
 terraform apply -var 'vpc_id=vpc-12345678' -var 'subnet_id=subnet-12345678' -var 'key_name=my-key'
 ```
+
+2. Executar ansible
+
+ansible-playbook playbook-master.yml -e "repo_username=usuariotdp repo_password=teste123"
