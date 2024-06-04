@@ -18,7 +18,7 @@
     enabled: no
 - name: Parar e desabilitar SELinux
   selinux:
-    state: disable
+    state: disabled
 - name: Instalar e configurar NTP
   yum:
     name: ntp
