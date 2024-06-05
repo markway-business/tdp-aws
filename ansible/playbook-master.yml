@@ -1,6 +1,6 @@
 ---
 - name: Configuração do Master
-  hosts: master
+  hosts: localhost
   become: true
   tasks:
     - name: Instalar pacotes httpd e createrepo
