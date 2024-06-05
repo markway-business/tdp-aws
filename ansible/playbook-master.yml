@@ -24,13 +24,11 @@
         - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/installer/2.1.0/rhel-7-x86_64/ambari-tdp-installer-rhel-7.sh", dest: "ambari-tdp-installer-rhel-7.sh" }
 
     - name: Extrair arquivos
-      unarchive:
-        src: "/var/www/html/{{ item }}"
-        dest: "/var/www/html/"
-        extra_opts: '-z'
+      command: "tar -xvzf /var/www/html/{{ item }} -C /var/www/html/"
       with_items:
         - tdp-components-2-1-0-rhel-7-x86-64.tar.gz
         - tdp-utils-2-1-0-rhel-7-x86-64.tar.gz
+      ignore_errors: yes
 
     - name: Criar repositórios
       command: createrepo "{{ item }}"
