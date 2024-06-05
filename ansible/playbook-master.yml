@@ -17,6 +17,7 @@
         dest: "/var/www/html/{{ item.dest }}"
         username: "{{ repo_username }}"
         password: "{{ repo_password }}"
+        timeout: 600
       with_items:
         - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/components/2.1.0/tdp-components-2-1-0-rhel-7-x86-64.tar.gz", dest: "tdp-components-2-1-0-rhel-7-x86-64.tar.gz" }
         - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/utils/2.1.0/tdp-utils-2-1-0-rhel-7-x86-64.tar.gz", dest: "tdp-utils-2-1-0-rhel-7-x86-64.tar.gz" }
@@ -26,6 +27,7 @@
       unarchive:
         src: "/var/www/html/{{ item }}"
         dest: "/var/www/html/"
+        extra_opts: '-z'
       with_items:
         - tdp-components-2-1-0-rhel-7-x86-64.tar.gz
         - tdp-utils-2-1-0-rhel-7-x86-64.tar.gz
