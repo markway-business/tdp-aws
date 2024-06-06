@@ -38,3 +38,5 @@ export-vars.sh
 *.pem
 inventory.ini
 .vagrant
+*.gz
+.DS_Store
