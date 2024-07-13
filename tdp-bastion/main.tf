@@ -115,10 +115,12 @@ resource "aws_instance" "bastion" {
   associate_public_ip_address = true
   
   user_data = <<-EOF
-              #!/bin/bash
-              # Atualizar pacotes e instalar Ansible e Git
-              yum update -y
-              yum install -y ansible git
+              #cloud-config
+              package_update: true
+              packages:
+                - epel-release
+                - ansible
+                - git
               EOF
 
   tags = {
@@ -129,7 +131,7 @@ resource "aws_instance" "bastion" {
 
 # Criar as instâncias Master na subnet privada
 resource "aws_instance" "master" {
-  count         = 2
+  count         = 1
   ami           = var.ami_id
   instance_type = "c5.xlarge"
   subnet_id     = aws_subnet.private.id
@@ -148,7 +150,7 @@ resource "aws_instance" "master" {
 
 # Criar as instâncias Data na subnet privada
 resource "aws_instance" "data" {
-  count         = 5
+  count         = 0
   ami           = var.ami_id
   instance_type = "c5.xlarge"
   subnet_id     = aws_subnet.private.id
@@ -194,4 +196,12 @@ output "public_ips" {
     aws_instance.master[*].public_ip,
     aws_instance.data[*].public_ip
   )
+}
+
+output "master_private_ips" {
+  value = aws_instance.master[*].private_ip
+}
+
+output "data_private_ips" {
+  value = aws_instance.data[*].private_ip
 }

@@ -1,4 +1,16 @@
 ---
+- name: Substituir mirror.centos.org por vault.centos.org em todos os arquivos .repo
+  shell: "sed -i 's/mirror.centos.org/vault.centos.org/g' /etc/yum.repos.d/*.repo"
+  become: true
+
+- name: Descomentar linhas que começam com # e contêm baseurl=http em todos os arquivos .repo
+  shell: "sed -i 's/^#baseurl=http/baseurl=http/g' /etc/yum.repos.d/*.repo"
+  become: true
+
+- name: Comentar linhas que começam com mirrorlist=http em todos os arquivos .repo
+  shell: "sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/*.repo"
+  become: true
+
 - name: Instalar pacotes necessários
   yum:
     name: "{{ item }}"
@@ -11,11 +23,18 @@
     - vim
     - mlocate
 
-- name: Parar e desabilitar firewall
+- name: Verificar se o firewalld está instalado
+  command: systemctl status firewalld
+  ignore_errors: true
+  register: firewalld_status
+
+- name: Desativar e parar o firewalld se estiver ativo
   systemd:
     name: firewalld
-    state: stopped
     enabled: no
+    state: stopped
+  when: firewalld_status.rc == 0
+
 - name: Parar e desabilitar SELinux
   selinux:
     state: disabled

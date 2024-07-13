@@ -40,3 +40,4 @@ inventory.ini
 .vagrant
 *.gz
 .DS_Store
+hosts

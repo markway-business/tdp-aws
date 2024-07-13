@@ -1,0 +1,1 @@
+{"blueprint":"clustergg","config_recommendation_strategy":"NEVER_APPLY","provision_action":"INSTALL_AND_START","configurations":[],"host_groups":[{"name":"host_group_0","hosts":[{"fqdn":"node01.localdomain"}]}],"Clusters":{"cluster_name":"clustergg"}}

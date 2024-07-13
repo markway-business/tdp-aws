@@ -1,6 +1,6 @@
 ---
 - name: Configuração do Master
-  hosts: localhost
+  hosts: master
   become: true
   tasks:
     - name: Instalar pacotes httpd e createrepo
@@ -21,7 +21,7 @@
       with_items:
         - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/components/2.1.0/tdp-components-2-1-0-rhel-7-x86-64.tar.gz", dest: "tdp-components-2-1-0-rhel-7-x86-64.tar.gz" }
         - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/utils/2.1.0/tdp-utils-2-1-0-rhel-7-x86-64.tar.gz", dest: "tdp-utils-2-1-0-rhel-7-x86-64.tar.gz" }
-        - { url: "https://repo.tecnisys.com.br/repository/yum/tdp/installer/2.1.0/rhel-7-x86_64/ambari-tdp-installer-rhel-7.sh", dest: "ambari-tdp-installer-rhel-7.sh" }
+      when: enableLocalRepo
 
     - name: Extrair arquivos
       command: "tar -xvzf /var/www/html/{{ item }} -C /var/www/html/"
@@ -29,6 +29,7 @@
         - tdp-components-2-1-0-rhel-7-x86-64.tar.gz
         - tdp-utils-2-1-0-rhel-7-x86-64.tar.gz
       ignore_errors: yes
+      when: enableLocalRepo
 
     - name: Criar repositórios
       command: createrepo "{{ item }}"
@@ -37,6 +38,7 @@
         - "/var/www/html/repo/yum/tdp/components/2.1.0/rhel-7-x86_64"
       notify: restart httpd
       tags: createrepo
+      when: enableLocalRepo
 
     - name: Configurar alias httpd
       blockinfile:
@@ -50,6 +52,130 @@
               Require all granted
             </Directory>
       notify: restart httpd
+      when: enableLocalRepo
+    - name: Baixar ambari installer
+      get_url:
+        url: "https://repo.tecnisys.com.br/repository/yum/tdp/installer/2.1.0/rhel-7-x86_64/ambari-tdp-installer-rhel-7.sh"
+        dest: "/var/www/html/ambari-tdp-installer-rhel-7.sh"
+        username: "{{ repo_username }}"
+        password: "{{ repo_password }}"
+        timeout: 600
+
+    - name: Install Ambari
+      shell: sudo sh /var/www/html/ambari-tdp-installer-rhel-7.sh -u {{ repo_username }} -p {{ repo_password }}
+      args:
+        creates: /path/to/ambari/installation/marker
+
+    - name: Install TDP
+      shell: sh /var/www/html/ambari-tdp-installer-rhel-7.sh --baseurl "file:///opt/repo/tdp/components/latest/rhel-7-x86_64"
+
+    - name: Download JDBC driver
+      get_url:
+        url: https://repo.tecnisys.com.br/repository/yum/tdp/utils/latest/rhel-7-x86_64/postgresql-42.2.16.jar
+        dest: /opt/postgresql-42.2.16.jar
+        username: "{{ repo_username }}"
+        password: "{{ repo_password }}"
+
+    - name: Setup JDBC driver in Ambari
+      shell: ambari-server setup --jdbc-db=postgres --jdbc-driver=/opt/postgresql-42.2.16.jar
+
+    - name: Silent setup of Ambari
+      shell: ambari-server setup -s
+
+    - name: Start Ambari server
+      shell: ambari-server start
+
+    - name: Create users and databases in PostgreSQL
+      become_user: postgres
+      block:
+        - name: Create airflow user
+          shell: createuser -s -d -l airflow
+          args:
+            creates: /var/lib/pgsql/14/data/airflow_user
+
+        - name: Set password for airflow user
+          shell: psql -U postgres -c "alter user airflow with password 'airflow'"
+
+        - name: Create airflow database
+          shell: createdb -O airflow airflow
+
+        - name: Create druid user
+          shell: createuser -s -d -l druid
+          args:
+            creates: /var/lib/pgsql/14/data/druid_user
+
+        - name: Set password for druid user
+          shell: psql -U postgres -c "alter user druid with password 'druid'"
+
+        - name: Create druid database
+          shell: createdb -O druid druid
+
+        - name: Create hive user
+          shell: createuser -s -d -l hive
+          args:
+            creates: /var/lib/pgsql/14/data/hive_user
+
+        - name: Set password for hive user
+          shell: psql -U postgres -c "alter user hive with password 'hive'"
+
+        - name: Create hive database
+          shell: createdb -O hive hive
+
+        - name: Create oozie user
+          shell: createuser -s -d -l oozie
+          args:
+            creates: /var/lib/pgsql/14/data/oozie_user
+
+        - name: Set password for oozie user
+          shell: psql -U postgres -c "alter user oozie with password 'oozie'"
+
+        - name: Create oozie database
+          shell: createdb -O oozie oozie
+
+        - name: Create ranger user
+          shell: createuser -s -d -l ranger
+          args:
+            creates: /var/lib/pgsql/14/data/ranger_user
+
+        - name: Set password for ranger user
+          shell: psql -U postgres -c "alter user ranger with password 'ranger'"
+
+        - name: Create ranger database
+          shell: createdb -O ranger ranger
+
+        - name: Create superset user
+          shell: createuser -s -d -l superset
+          args:
+            creates: /var/lib/pgsql/14/data/superset_user
+
+        - name: Set password for superset user
+          shell: psql -U postgres -c "alter user superset with password 'superset'"
+
+        - name: Create superset database
+          shell: createdb -O superset superset
+
+    - name: Update pg_hba.conf to allow access for additional users
+      replace:
+        path: /var/lib/pgsql/14/data/pg_hba.conf
+        regexp: 'ambari,mapred'
+        replace: 'airflow,ambari,druid,hive,mapred,oozie,ranger,superset'
+
+    - name: Allow access from network interfaces in postgresql.conf
+      replace:
+        path: /var/lib/pgsql/14/data/postgresql.conf
+        regexp: "#listen_addresses = 'localhost'"
+        replace: "listen_addresses = '*'"
+
+    - name: Increase max_connections in postgresql.conf
+      replace:
+        path: /var/lib/pgsql/14/data/postgresql.conf
+        regexp: "max_connections = 100"
+        replace: "max_connections = 500"
+
+    - name: Restart PostgreSQL
+      systemd:
+        name: postgresql-14
+        state: restarted
   roles:
     - role: config-so
 
