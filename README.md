@@ -16,18 +16,20 @@ export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
 ``` 
 4. Identificar o vpc id e subnet id correspondente a sua infraestrutura.
 5. Criar uma key de acesso aos servidores - ver mais em: 
+
 # Como executar os scripts
 
 1. Executar scripts terraform
 
 ```
+cd terraform-aws
 terraform init
 terraform apply -var 'key_name=keypair-tdp.pem'
 ```
 
 2. Executar script para geracao de inventario ansible
 
-./scripts/gen-inventory-hosts-public.sh 
+../scripts/gen-inventory-hosts-public.sh 
 
 2. Executar ansible
 cd ansible
