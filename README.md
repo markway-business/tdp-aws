@@ -14,8 +14,6 @@ O objetivo deste repositório é automatizar o provisionamento de máquinas para
 export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
 export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
 ``` 
-4. Identificar o vpc id e subnet id correspondente a sua infraestrutura.
-5. Criar uma key de acesso aos servidores - ver mais em: 
 
 # Como executar os scripts
 
